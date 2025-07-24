@@ -1,4 +1,7 @@
 <?php
+/**
+ * Clase para manejar operaciones relacionadas con el calendario de tareas
+ */
 class Calendario {
     private $pdo;
 
@@ -6,6 +9,11 @@ class Calendario {
         $this->pdo = $pdo;
     }
 
+    /**
+     * Obtiene las tareas de un proyecto para mostrar en el calendario
+     * @param int $proyecto_id Identificador del proyecto
+     * @return array Arreglo con las tareas del proyecto
+     */
     public function getTareasPorProyecto($proyecto_id) {
         $stmt = $this->pdo->prepare("
             SELECT id, titulo as title, fecha_estimada as start, estado, prioridad, descripcion
@@ -22,6 +30,11 @@ class Calendario {
         return $tareas;
     }
 
+    /**
+     * Obtiene el color según el estado de la tarea
+     * @param string $estado Estado de la tarea
+     * @return string Color en formato HEX
+     */
     private function getColorPorEstado($estado) {
         switch ($estado) {
             case 'Hecha':
@@ -36,6 +49,11 @@ class Calendario {
         }
     }
 
+    /**
+     * Obtiene las tareas flotantes (sin fecha) de un proyecto
+     * @param int $proyecto_id Identificador del proyecto
+     * @return array Arreglo con las tareas flotantes del proyecto
+     */
     public function getTareasFlotantes($proyecto_id) {
         $stmt = $this->pdo->prepare("
             SELECT id, titulo as title, 'Sin fecha' as start, estado, prioridad, descripcion
@@ -50,6 +68,12 @@ class Calendario {
         return $tareas;
     }
 
+    /**
+     * Renderiza el calendario con las tareas del proyecto
+     * @param int $proyecto_id Identificador del proyecto
+     * @param string $viewType Tipo de vista (all, pendientes, completadas, flotantes)
+     * @return string JSON con las tareas del proyecto
+     */
     public function renderCalendar($proyecto_id, $viewType = 'all') {
         $events = [];
         switch ($viewType) {
@@ -70,6 +94,9 @@ class Calendario {
     }
 }
 
+/**
+ * Clase para manejar operaciones de edición de tareas
+ */
 class Editar {
     private $pdo;
 
@@ -77,12 +104,24 @@ class Editar {
         $this->pdo = $pdo;
     }
 
+    /**
+     * Obtiene una tarea por su identificador
+     * @param int $tarea_id Identificador de la tarea
+     * @return array Arreglo con la tarea
+     */
     public function obtenerTarea($tarea_id) {
         $stmt = $this->pdo->prepare("SELECT * FROM tareas WHERE id = ?");
         $stmt->execute([$tarea_id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    /**
+     * Actualiza una tarea
+     * @param int $tarea_id Identificador de la tarea
+     * @param array $data Datos de la tarea actualizados
+     * @param int $usuario_id Identificador del usuario que realiza la edición
+     * @return bool Verdadero si la edición fue exitosa, falso de lo contrario
+     */
     public function actualizarTarea($tarea_id, $data, $usuario_id) {
         $tarea = $this->obtenerTarea($tarea_id);
         if (!$tarea || ($tarea['creador_id'] !== $usuario_id && $tarea['asignado_id'] !== $usuario_id)) {
@@ -112,7 +151,13 @@ class Editar {
         }
     }
 
-    // Método para manejar edición desde el calendario
+    /**
+     * Actualiza el estado de una tarea desde el calendario
+     * @param int $tarea_id Identificador de la tarea
+     * @param string $nuevo_estado Nuevo estado de la tarea
+     * @param int $usuario_id Identificador del usuario que realiza la edición
+     * @return bool Verdadero si la edición fue exitosa, falso de lo contrario
+     */
     public function actualizarEstadoDesdeCalendario($tarea_id, $nuevo_estado, $usuario_id) {
         $tarea = $this->obtenerTarea($tarea_id);
         if (!$tarea || ($tarea['creador_id'] !== $usuario_id && $tarea['asignado_id'] !== $usuario_id)) {
